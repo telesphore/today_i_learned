@@ -1,2 +1,3 @@
 # today_i_learned
-Random stuff
+
+This contains small projects that I'm using for learning algorithms, techniques, and programming languages.
