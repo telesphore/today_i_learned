@@ -75,16 +75,12 @@ const Grid = struct {
         for (0..COUNT) |row| {
             for (0..COUNT) |col| {
                 self.set_cell2(row, col);
-                // self.set_cell(row, col);
             }
         }
     }
 
     // This version is trying to convert all jmp/branch instructions into cmov instructions
     // in preperation for a kernel.
-    //
-    // With ReleaseFast there is agressive loop unrolling but very little cmov-ing.
-    // Experiment failed.
     fn set_cell2(self: *Grid, row: usize, col: usize) void {
         var idx = index(row, col);
         const color = self.prev[idx];
