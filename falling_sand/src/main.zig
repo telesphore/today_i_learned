@@ -74,7 +74,7 @@ const Grid = struct {
 
         for (0..COUNT) |row| {
             for (0..COUNT) |col| {
-                self.set_cell2(row, col);
+                self.set_cell(row, col);
             }
         }
     }
@@ -97,9 +97,11 @@ const Grid = struct {
         const can_down_left = down_ok and left_ok and self.prev[down_left] == EMPTY;
         const can_down_right = down_ok and right_ok and self.prev[down_right] == EMPTY;
 
+        const left_overwrites = RAND.boolean();
+
         idx = if (can_down_left) down_left else idx;
         idx = if (can_down_right) down_right else idx;
-        idx = if (RAND.boolean() and can_down_left) down_left else idx;
+        idx = if (left_overwrites and can_down_left) down_left else idx;
         idx = if (can_down) down else idx;
 
         self.next[idx] = if (color != EMPTY) color else self.next[idx];
@@ -132,7 +134,7 @@ const Grid = struct {
             self.next[down_left] = color;
         } else if (can_down_right) {
             self.next[down_right] = color;
-        } else if (!left_first and can_down_left) {
+        } else if (can_down_left) {
             self.next[down_left] = color;
         } else {
             self.next[idx] = color;
