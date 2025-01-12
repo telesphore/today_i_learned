@@ -13,6 +13,6 @@ I'm using this to familiarize myself with Zig and RayLib.
 
 ### I'll forget this
 
-'''zsh
+```zsh
 objdump -Sd zig-out/bin/falling_sand > junk/falling_sand.asm
-'''
+```
