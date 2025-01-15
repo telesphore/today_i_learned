@@ -7,13 +7,11 @@ const ray = @cImport({
 const print = std.debug.print;
 
 const CELL: c_int = 4;
-
-const COL_COUNT: c_int = 256;
 const ROW_COUNT: c_int = 256;
+const COL_COUNT: c_int = 256;
+
 const ROW_COUNT_M1 = ROW_COUNT - 1;
 const COL_COUNT_M1 = COL_COUNT - 1;
-
-const PADDED_ROWS = 1 + ROW_COUNT + 1;
 
 const COLOR: [17]ray.struct_Color = .{
     ray.RED,
@@ -47,10 +45,10 @@ const Grid = struct {
     grains: u32 = 0,
 
     fn init(allocator: std.mem.Allocator, rand: std.Random) !Grid {
-        const next = try allocator.alloc(u8, PADDED_ROWS * COL_COUNT);
+        const next = try allocator.alloc(u8, ROW_COUNT * COL_COUNT);
         errdefer allocator.free(next);
 
-        const prev = try allocator.alloc(u8, PADDED_ROWS * COL_COUNT);
+        const prev = try allocator.alloc(u8, ROW_COUNT * COL_COUNT);
         errdefer allocator.free(prev);
 
         @memset(next, EMPTY);
@@ -74,7 +72,7 @@ const Grid = struct {
 
         @memset(self.next, EMPTY);
 
-        for (1..PADDED_ROWS) |row| {
+        for (0..ROW_COUNT) |row| {
             for (0..COL_COUNT) |col| {
                 self.set_cell(row, col);
             }
@@ -87,13 +85,13 @@ const Grid = struct {
         var idx = index(row, col);
         const color = self.prev[idx];
 
-        const down_ok = row < ROW_COUNT;
+        const down_ok = row < ROW_COUNT_M1;
         const left_ok = col > 0;
         const right_ok = col < COL_COUNT_M1;
 
         const down = index(row + 1, col);
-        const down_left = index(row + 1, col - 1);
         const down_right = index(row + 1, col + 1);
+        const down_left = if (left_ok) index(row + 1, col - 1) else 0;
 
         const can_down = down_ok and self.prev[down] == EMPTY;
         const can_down_left = down_ok and left_ok and self.prev[down_left] == EMPTY;
@@ -116,13 +114,13 @@ const Grid = struct {
 
         if (color == EMPTY) return;
 
-        const down_ok = row < ROW_COUNT;
+        const down_ok = row < ROW_COUNT_M1;
         const left_ok = col > 0;
         const right_ok = col < COL_COUNT_M1;
 
         const down = index(row + 1, col);
-        const down_left = index(row + 1, col - 1);
         const down_right = index(row + 1, col + 1);
+        const down_left = if (left_ok) index(row + 1, col - 1) else 0;
 
         const can_down = down_ok and self.prev[down] == EMPTY;
         const can_down_left = down_ok and left_ok and self.prev[down_left] == EMPTY;
@@ -183,8 +181,9 @@ const Grid = struct {
 };
 
 pub fn main() !void {
-    const width: c_int = COL_COUNT * CELL;
-    const height: c_int = ROW_COUNT * CELL;
+    const width = COL_COUNT * CELL;
+    const height = ROW_COUNT * CELL;
+
     ray.InitWindow(width, height, "Falling Sand (zig)");
     defer ray.CloseWindow();
 
@@ -197,6 +196,8 @@ pub fn main() !void {
     var grid = try Grid.init(allocator, rand);
     defer grid.deinit();
 
+    // ray.SetTargetFPS(10);
+
     while (!ray.WindowShouldClose()) {
         grid.update();
         if (ray.IsMouseButtonDown(ray.MOUSE_BUTTON_LEFT)) {
@@ -204,7 +205,7 @@ pub fn main() !void {
             if (pos.x >= 0 and pos.x < width and pos.y >= 0 and pos.y < height) {
                 const row: usize = @intFromFloat(@floor(pos.y / CELL));
                 const col: usize = @intFromFloat(@floor(pos.x / CELL));
-                const idx = Grid.index(row + 1, col);
+                const idx = Grid.index(row, col);
                 if (grid.next[idx] == EMPTY) grid.next[idx] = grid.cell_color();
             }
         }
