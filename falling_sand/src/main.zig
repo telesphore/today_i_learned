@@ -74,7 +74,7 @@ const Grid = struct {
 
         for (0..ROW_COUNT) |row| {
             for (0..COL_COUNT) |col| {
-                self.set_cell(row, col);
+                self.set_cell1(row, col);
             }
         }
     }
@@ -89,9 +89,10 @@ const Grid = struct {
         const left_ok = col > 0;
         const right_ok = col < COL_COUNT_M1;
 
-        const down = index(row + 1, col);
-        const down_right = index(row + 1, col + 1);
-        const down_left = if (left_ok) index(row + 1, col - 1) else 0;
+        const down_row = @min(row + 1, ROW_COUNT_M1);
+        const down = index(down_row, col);
+        const down_left = index(down_row, @max(col, 1) - 1);
+        const down_right = index(down_row, @min(col + 1, COL_COUNT_M1));
 
         const can_down = down_ok and self.prev[down] == EMPTY;
         const can_down_left = down_ok and left_ok and self.prev[down_left] == EMPTY;
@@ -108,7 +109,7 @@ const Grid = struct {
     }
 
     // The original working version
-    fn set_cell(self: *Grid, row: usize, col: usize) void {
+    fn set_cell1(self: *Grid, row: usize, col: usize) void {
         const idx = index(row, col);
         const color = self.prev[idx];
 
@@ -118,9 +119,10 @@ const Grid = struct {
         const left_ok = col > 0;
         const right_ok = col < COL_COUNT_M1;
 
-        const down = index(row + 1, col);
-        const down_right = index(row + 1, col + 1);
-        const down_left = if (left_ok) index(row + 1, col - 1) else 0;
+        const down_row = @min(row + 1, ROW_COUNT_M1);
+        const down = index(down_row, col);
+        const down_left = index(down_row, @max(col, 1) - 1);
+        const down_right = index(down_row, @min(col + 1, COL_COUNT_M1));
 
         const can_down = down_ok and self.prev[down] == EMPTY;
         const can_down_left = down_ok and left_ok and self.prev[down_left] == EMPTY;
