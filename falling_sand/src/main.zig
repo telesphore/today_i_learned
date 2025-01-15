@@ -7,10 +7,9 @@ const ray = @cImport({
 const print = std.debug.print;
 
 const CELL: c_int = 4;
-const COUNT: c_int = 256;
 
+const COUNT: c_int = 256;
 const COUNT_M1 = COUNT - 1;
-const SCREEN: c_int = COUNT * CELL;
 
 const COLOR: [17]ray.struct_Color = .{
     ray.RED,
@@ -146,7 +145,13 @@ const Grid = struct {
             const r: c_int = @intCast(row);
             for (0..COUNT) |col| {
                 const c: c_int = @intCast(col);
-                ray.DrawRectangle(c * CELL, r * CELL, CELL, CELL, COLOR[self.next[index(row, col)]]);
+                ray.DrawRectangle(
+                    c * CELL,
+                    r * CELL,
+                    CELL,
+                    CELL,
+                    COLOR[self.next[index(row, col)]],
+                );
             }
         }
     }
@@ -178,7 +183,8 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
 
-    ray.InitWindow(SCREEN, SCREEN, "Falling Sand (zig)");
+    const screen: c_int = COUNT * CELL;
+    ray.InitWindow(screen, screen, "Falling Sand (zig)");
     defer ray.CloseWindow();
 
     var grid = try Grid.init(allocator);
@@ -188,7 +194,7 @@ pub fn main() !void {
         grid.update();
         if (ray.IsMouseButtonDown(ray.MOUSE_BUTTON_LEFT)) {
             const pos = ray.GetMousePosition();
-            if (pos.x >= 0 and pos.x < SCREEN and pos.y >= 0 and pos.y < SCREEN) {
+            if (pos.x >= 0 and pos.x < screen and pos.y >= 0 and pos.y < screen) {
                 const row: usize = @intFromFloat(@floor(pos.y / CELL));
                 const col: usize = @intFromFloat(@floor(pos.x / CELL));
                 const idx = Grid.index(row, col);
