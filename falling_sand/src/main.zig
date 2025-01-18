@@ -74,7 +74,7 @@ const Grid = struct {
 
         for (0..ROW_COUNT) |row| {
             for (0..COL_COUNT) |col| {
-                self.set_cell1(row, col);
+                self.set_cell2(row, col);
             }
         }
     }
@@ -159,6 +159,15 @@ const Grid = struct {
         }
     }
 
+    fn cell_color(self: *Grid) u8 {
+        self.grains += 1;
+        if (self.grains & 0x0000007F == 0) { // Change color after spawning 128 grains
+            self.color_idx += 1;
+            self.color_idx &= 0x0F; // Wrap with 16 colors
+        }
+        return self.color_idx;
+    }
+
     fn swap_buffers(self: *Grid) void {
         // self.next ^= self.prev;
         // self.prev ^= self.next;
@@ -166,15 +175,6 @@ const Grid = struct {
         const tmp = self.prev;
         self.prev = self.next;
         self.next = tmp;
-    }
-
-    fn cell_color(self: *Grid) u8 {
-        self.grains += 1;
-        if (self.grains & 0x0000007F == 0) {
-            self.color_idx += 1;
-            self.color_idx &= 0x0F;
-        }
-        return self.color_idx;
     }
 
     fn index(row: usize, col: usize) usize {
