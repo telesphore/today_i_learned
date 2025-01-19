@@ -23,6 +23,6 @@ objdump -Sd zig-out/bin/falling_sand > junk/falling_sand.asm
 - On the other hand, falling_sand is over an order of magnitude slower than the game_of_life (16.5x). game_of_life is about 2500 fps while falling_sand is about 150 fps. Causes?
   1. Running over the array twice. For sure
   2. Out of order memory access. Probably, but I should be using at most 3 cache lines at a time? I should to look into this.
-  3. Surprisingly, not the randomization. Tested, and at most it's 1 fps
+  3. Surprisingly, not the randomization. Tested, and any compute loss was negligible.
   4. Zig is probably vectorizing the update functions in the game_of_life.
   5. I'm probably not helping the situation with other subtle (or not) issues. Well, yea
