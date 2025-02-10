@@ -11,15 +11,15 @@
 #define ARENA_ALIGN (2 * sizeof(void*))
 
 typedef struct Arena {
-    unsigned char* buff;
-    size_t next;
-    size_t end;
+    unsigned char* start;
+    unsigned char* next;
+    unsigned char* end;
 } Arena;
 
 Arena* arena_init(Arena* arena, void* buffer, size_t capacity) {
-    arena->buff = buffer;
+    arena->start = buffer;
     arena->next = 0;
-    arena->end = capacity;
+    arena->end = (unsigned char*)buffer + capacity;
     return arena;
 }
 
@@ -27,25 +27,24 @@ bool is_power_of_2(uintptr_t x) {
     return (x & (x - 1)) == 0;
 }
 
-uintptr_t arena_align(uintptr_t ptr, size_t align) {
+unsigned char* arena_align(unsigned char* ptr, size_t align) {
     assert(is_power_of_2(align));
 
-    uintptr_t modulo = ptr & (align - 1);
+    uintptr_t modulo = (uintptr_t)ptr & (align - 1);
     ptr += modulo == 0 ? 0 : align - modulo;
     return ptr;
 }
 
 void* arena_alloc_align(Arena* arena, size_t size, size_t align) {
-    uintptr_t next = arena_align(arena->next, align);
+    unsigned char* curr = arena_align(arena->next, align);
 
-    if (next >= arena->end) { return NULL; }
+    if (curr >= arena->end) { return NULL; }
 
-    arena->next = next + size;
+    arena->next = curr + size;
 
-    void* ptr = &arena->buff[next];
-    memset(ptr, 0, size);
+    memset(curr, 0, size);
 
-    return ptr;
+    return curr;
 }
 
 void* arena_alloc(Arena* arena, size_t size) {
