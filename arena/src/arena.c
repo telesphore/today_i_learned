@@ -18,7 +18,7 @@ typedef struct Arena {
 
 Arena* arena_init(Arena* arena, void* buffer, size_t capacity) {
     arena->start = buffer;
-    arena->next = 0;
+    arena->next = buffer;
     arena->end = (unsigned char*)buffer + capacity;
     return arena;
 }
