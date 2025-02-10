@@ -55,7 +55,7 @@ void randomize(Game *game) {
 }
 
 void draw_cell(int row, int col) {
-    DrawRectangle(col * CELL, row * CELL, CELL, CELL, GREEN);
+    DrawRectangle(col * CELL, row * CELL, CELL, CELL, RED);
 }
 
 uint8_t update_cell(Game *game, int row, int col) {

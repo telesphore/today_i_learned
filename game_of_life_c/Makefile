@@ -1,4 +1,4 @@
-CC = gcc
+CC = gcc-12
 CFLAGS = -Wall -Wextra -std=c2x -pedantic
 OPTFLAGS = -O3 -march=native -mavx -mavx2 -mfma -msse -msse2 -msse3
 LIBFLAGS = -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
