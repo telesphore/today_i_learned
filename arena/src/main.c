@@ -17,7 +17,7 @@ static char* test1() {
     unsigned char buff[size];
     Arena arena = {0};
     arena_init(&arena, buff, size);
-    ASSERT("Arena length", arena.end == arena.start + size);
+    ASSERT("Arena length", arena.end == size);
     return 0;
 }
 
