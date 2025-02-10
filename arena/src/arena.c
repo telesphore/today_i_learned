@@ -52,7 +52,7 @@ void* arena_alloc(Arena* arena, size_t size) {
 }
 
 void arena_free_all(Arena* arena) {
-    arena->next = 0;
+    arena->next = arena->start;
 }
 
 #endif
