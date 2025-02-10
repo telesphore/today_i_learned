@@ -45,7 +45,7 @@ void* arena_alloc_align(Arena* arena, size_t size, size_t align) {
     void* ptr = &arena->buff[next];
     memset(ptr, 0, size);
 
-	return ptr;
+    return ptr;
 }
 
 void* arena_alloc(Arena* arena, size_t size) {

@@ -14,7 +14,7 @@ int tests_run = 0;
 
 static char* test1() {
     const size_t size = 1024;
-	unsigned char buff[size];
+    unsigned char buff[size];
     Arena arena = {0};
     arena_init(&arena, buff, size);
     ASSERT("Arena length", arena.end == size);
@@ -35,21 +35,21 @@ int main() {
         printf("All tests passed\n");
     }
 
-	/**/
-	/*   const size_t size = 1024;*/
-	/*unsigned char buff[size];*/
-	/**/
-	/*Arena arena = {0};*/
-	/*arena_init(&arena, buff, size);*/
-	/**/
-	/*for (int i = 0; i < 10; ++i) {*/
-	/*       int* j = (int*)arena_alloc(&arena, sizeof(int));*/
-	/*       *j = i;*/
-	/*	printf("%p: %d\n", (void*)j, *j);*/
-	/*}*/
-	/**/
-	/*arena_free_all(&arena);*/
+    /**/
+    /*   const size_t size = 1024;*/
+    /*unsigned char buff[size];*/
+    /**/
+    /*Arena arena = {0};*/
+    /*arena_init(&arena, buff, size);*/
+    /**/
+    /*for (int i = 0; i < 10; ++i) {*/
+    /*       int* j = (int*)arena_alloc(&arena, sizeof(int));*/
+    /*       *j = i;*/
+    /* printf("%p: %d\n", (void*)j, *j);*/
+    /*}*/
+    /**/
+    /*arena_free_all(&arena);*/
 
-	return result != 0;
+    return result != 0;
 }
 
