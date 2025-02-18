@@ -16,7 +16,6 @@ dev:
 	. .venv/bin/activate
 	python3.12 -m pip install -U pip setuptools wheel
 	python3.12 -m pip install -e .[dev]
-	pre-commit install
 
 clean:
 	rm -rf .venv

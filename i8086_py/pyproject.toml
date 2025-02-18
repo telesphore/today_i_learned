@@ -16,8 +16,7 @@ dependencies = [
 optional-dependencies.dev = [
     "build",
     "neovim",
-    "pre-commit",
-    "pre-commit-hooks",
+    "pynvim",
     "ruff",
     "ruff-lsp",
 ]
@@ -38,6 +37,7 @@ target-version = "py312"
 show-fixes = true
 exclude = [
     "**/external/**", # External code
+    "**/history/**",  # This is usually one-off scripts saved out-of-band
 ]
 
 lint.select = [
