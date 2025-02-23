@@ -4,9 +4,10 @@ import argparse
 import textwrap
 from pathlib import Path
 
+from pylib.action import ACTION
+from pylib.cpu import Cpu
 from pylib.disasmbler import OPS
 from pylib.executable import Exe
-from pylib.instruction import INSTR, Instr
 
 
 def main(args):
@@ -14,13 +15,15 @@ def main(args):
         data = f.read()
 
     exe = Exe(data=data, end=len(data))
+    cpu = Cpu()
 
     while exe.idx < exe.end:
         op = OPS[exe.byte]
-        src, dst, *mnem = op.disasm(exe)
-        instr = Instr(src=src, dst=dst)
-        instr.mnem = mnem if mnem else op.mnem
-        instr.act = INSTR[instr.mnem].act
+        instr = op.disasm(exe)
+        ACTION[instr.mnem](cpu, instr)
+        print(instr.format())
+
+    cpu.output()
 
 
 def parse_args():
@@ -41,7 +44,6 @@ def parse_args():
         "--asm",
         "-a",
         type=Path,
-        required=True,
         help="""Compare the results to this file.""",
     )
 

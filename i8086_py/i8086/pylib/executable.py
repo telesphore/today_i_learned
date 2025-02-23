@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from i8086.pylib import instr
+from i8086.pylib.instruction import Instr
 
 
 @dataclass
@@ -8,7 +8,7 @@ class Exe:
     data: list[int]
     end: int
     idx: int = 0
-    instr: list[instr.Instr] = field(default_factory=list)
+    instr: list[Instr] = field(default_factory=list)
 
     @property
     def byte(self):
