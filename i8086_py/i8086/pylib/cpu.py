@@ -1,10 +1,12 @@
+import array
+from pathlib import Path
+
 from i8086.pylib.instruction import REG, REG16
 
 
 class Cpu:
-    def __init__(self, data, end):
-        self.data: list[int] = data
-        self.end: int = end
+    def __init__(self, prog):
+        self.end: int = len(prog)
 
         self.reg: list[list[int]] = [
             [0, 0, 0, 0, 0, 0, 0, 0],  # reg8
@@ -19,18 +21,19 @@ class Cpu:
         self.sf: int = 0
         self.pf: int = 0
 
-        self.mem: list[int] = [None] * 65536
+        self.mem: list[int] = [0] * 65536
+        self.mem[0 : self.end] = prog
 
     @property
     def byte(self):
-        return self.data[self.ip]
+        return self.mem[self.ip]
 
     def consume_byte(self):
         byte = self.byte
         self.ip += 1
         return byte
 
-    def display(self):
+    def display(self, start=0, end=None):
         for reg in range(8):
             val = self.reg[REG16][reg]
             hx = f"0x{val:04x}".replace("-", "")
@@ -43,6 +46,11 @@ class Cpu:
         print(f"pf = {self.pf}")
         print()
         print("memory")
-        for i, byte in enumerate(self.mem):
-            if byte is not None:
-                print(f"{i:04d} {byte:04x} ({byte})")
+        end = end if end else start + 16
+        for i, byte in enumerate(self.mem[start:end]):
+            print(f"{i:04d} {byte:04x} ({byte})")
+
+    def dump(self, path: Path):
+        bytes_ = array.array("B", [b & 0xFF for b in self.mem])
+        with path.open("wb") as f:
+            bytes_.tofile(f)

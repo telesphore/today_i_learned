@@ -11,18 +11,23 @@ from pylib.disasmbler import OPS
 
 def main(args):
     with args.bin.open("rb") as f:
-        data = f.read()
+        prog = f.read()
 
-    cpu = Cpu(data=data, end=len(data))
+    cpu = Cpu(prog=prog)
 
     while cpu.ip < cpu.end:
         op = OPS[cpu.byte]
         instr = op.disasm(cpu)
         ACTION[instr.mnem](cpu, instr)
-        print(instr.format())
+        if not args.quiet:
+            print(instr.format())
 
-    print()
-    cpu.display()
+    if not args.quiet:
+        print()
+        cpu.display(1000)
+
+    if args.dump:
+        cpu.dump(args.dump)
 
 
 def parse_args():
@@ -37,6 +42,20 @@ def parse_args():
         type=Path,
         required=True,
         help="""Path to a binary file to parse.""",
+    )
+
+    arg_parser.add_argument(
+        "--dump",
+        "-d",
+        type=Path,
+        help="""Dump the cpu's memory to this file.""",
+    )
+
+    arg_parser.add_argument(
+        "--quiet",
+        "-q",
+        action="store_true",
+        help="""Don't print the programe status.""",
     )
 
     args = arg_parser.parse_args()

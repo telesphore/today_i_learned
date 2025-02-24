@@ -65,7 +65,7 @@ def literal(cpu: Cpu, size: int) -> int:
     Note that cpu.ip is changed.
     """
     val = int.from_bytes(
-        cpu.data[cpu.ip : cpu.ip + size], byteorder="little", signed=True
+        cpu.mem[cpu.ip : cpu.ip + size], byteorder="little", signed=True
     )
     cpu.ip += size
     return val
@@ -142,7 +142,11 @@ def mod_math_op2_rm(cpu: Cpu):
     return mod_op_rm(cpu, inst.OP_MATH2)
 
 
-def mod_move_op_rm(cpu: Cpu):
+def mod_move_op_rm8(cpu: Cpu):
+    return mod_op_rm(cpu, inst.OP_MOVE, 1)
+
+
+def mod_move_op_rm16(cpu: Cpu):
     return mod_op_rm(cpu, inst.OP_MOVE, 2)
 
 
@@ -480,8 +484,8 @@ OPS = [
     Byte1(0xC3, mnem="ret", fmt="ret (intrasegment)"),
     Byte1(0xC4, mod_reg_rm, mnem="les", fmt="les reg16,mem16"),
     Byte1(0xC5, mod_reg_rm, mnem="lds", fmt="lds reg16,mem16"),
-    Byte1(0xC6, mod_move_op_rm, mnem="mov", fmt="mov mem8,immed8"),
-    Byte1(0xC7, mod_move_op_rm, mnem="mov", fmt="mov mem16,immed16"),
+    Byte1(0xC6, mod_move_op_rm8, mnem="mov", fmt="mov mem8,immed8"),
+    Byte1(0xC7, mod_move_op_rm16, mnem="mov", fmt="mov mem16,immed16"),
     Byte1(0xC8, fmt="(not used)"),
     Byte1(0xC9, fmt="(not used)"),
     Byte1(0xCA, imm16, mnem="ret", fmt="ret immed16 (intersegment)"),

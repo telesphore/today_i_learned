@@ -90,7 +90,7 @@ class Instr:
         print(hex(self.key), self)
 
     def format(self):
-        # self.debug()
+        self.debug()
         out = ""
 
         if self.dst:
