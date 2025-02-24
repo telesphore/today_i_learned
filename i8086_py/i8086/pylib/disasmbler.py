@@ -2,7 +2,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from i8086.pylib import instruction as inst
-from i8086.pylib.executable import Exe
+from i8086.pylib.cpu import Cpu
 
 
 @dataclass
@@ -58,16 +58,16 @@ class BitFields:
 
 
 # ###########################################################################
-def literal(exe: Exe, size: int) -> int:
+def literal(cpu: Cpu, size: int) -> int:
     """
     Consume a literal value of the given size and return it.
 
-    Note that exe.idx is changed.
+    Note that cpu.ip is changed.
     """
     val = int.from_bytes(
-        exe.data[exe.idx : exe.idx + size], byteorder="little", signed=True
+        cpu.data[cpu.ip : cpu.ip + size], byteorder="little", signed=True
     )
-    exe.idx += size
+    cpu.ip += size
     return val
 
 
@@ -75,22 +75,22 @@ def literal(exe: Exe, size: int) -> int:
 RegRm = inst.EffAddr | inst.Reg
 
 
-def calc_eff_addr(exe: Exe, fields1: BitFields, fields2: BitFields) -> inst.EffAddr:
+def calc_eff_addr(cpu: Cpu, fields1: BitFields, fields2: BitFields) -> inst.EffAddr:
     match fields2.mod:
         case 0 if fields2.rm == 0b_110:
             size = 1 + fields1.w
-            disp = literal(exe, size)
+            disp = literal(cpu, size)
             eff_addr = inst.EffAddr(disp=disp, size=size)
 
         case 0:
             eff_addr = inst.EffAddr(ea_reg=fields2.rm, size=0)
 
         case 1:
-            disp = literal(exe, 1)
+            disp = literal(cpu, 1)
             eff_addr = inst.EffAddr(ea_reg=fields2.rm, disp=disp, size=1)
 
         case 2:
-            disp = literal(exe, 2)
+            disp = literal(cpu, 2)
             eff_addr = inst.EffAddr(ea_reg=fields2.rm, disp=disp, size=2)
 
         case 3:
@@ -108,141 +108,141 @@ def mnemonic(byte1):
 
 
 # ###########################################################################
-def mod_reg_rm(exe: Exe) -> tuple[inst.Src, inst.Dst]:
-    byte1 = exe.consume_byte()
-    byte2 = exe.consume_byte()
+def mod_reg_rm(cpu: Cpu) -> tuple[inst.Src, inst.Dst]:
+    byte1 = cpu.consume_byte()
+    byte2 = cpu.consume_byte()
     fields1 = BitFields.dw_fields(byte1)
     fields2 = BitFields.mod_reg_rm_fields(byte2)
     reg = inst.Reg(fields2.reg, fields1.w)
-    eff_addr = calc_eff_addr(exe, fields1, fields2)
+    eff_addr = calc_eff_addr(cpu, fields1, fields2)
     src, dst = swap(fields1, reg, eff_addr)
     return inst.Instr(key=byte1, src=src, dst=dst, mnem=mnemonic(byte1))
 
 
-def mod_op_rm(exe: Exe, ops_group: int, imm_size):
-    byte1 = exe.consume_byte()
-    byte2 = exe.consume_byte()
+def mod_op_rm(cpu: Cpu, ops_group: int, imm_size):
+    byte1 = cpu.consume_byte()
+    byte2 = cpu.consume_byte()
     fields1 = BitFields.dw_fields(byte1)
     fields2 = BitFields.mod_op_rm_fields(byte2)
-    eff_addr = calc_eff_addr(exe, fields1, fields2)
-    imm = inst.Imm(data=literal(exe, imm_size), size=imm_size)
+    eff_addr = calc_eff_addr(cpu, fields1, fields2)
+    imm = inst.Imm(data=literal(cpu, imm_size), size=imm_size)
     mnem = inst.OPS2[ops_group][fields2.op]
     return inst.Instr(key=byte1, dst=eff_addr, imm=imm, mnem=mnem)
 
 
-def mod_math_op_rm8(exe: Exe):
-    return mod_op_rm(exe, inst.OP_MATH1, 1)
+def mod_math_op_rm8(cpu: Cpu):
+    return mod_op_rm(cpu, inst.OP_MATH1, 1)
 
 
-def mod_math_op_rm16(exe: Exe):
-    return mod_op_rm(exe, inst.OP_MATH1, 2)
+def mod_math_op_rm16(cpu: Cpu):
+    return mod_op_rm(cpu, inst.OP_MATH1, 2)
 
 
-def mod_math_op2_rm(exe: Exe):
-    return mod_op_rm(exe, inst.OP_MATH2)
+def mod_math_op2_rm(cpu: Cpu):
+    return mod_op_rm(cpu, inst.OP_MATH2)
 
 
-def mod_move_op_rm(exe: Exe):
-    return mod_op_rm(exe, "mov")
+def mod_move_op_rm(cpu: Cpu):
+    return mod_op_rm(cpu, inst.OP_MOVE, 2)
 
 
-def mod_stack_op_rm(exe: Exe):
-    return mod_op_rm(exe, inst.OP_STACK)
+def mod_stack_op_rm(cpu: Cpu):
+    return mod_op_rm(cpu, inst.OP_STACK)
 
 
-def mod_shift_op_rm(exe: Exe):
-    return mod_op_rm(exe, inst.OP_SHIFT)
+def mod_shift_op_rm(cpu: Cpu):
+    return mod_op_rm(cpu, inst.OP_SHIFT)
 
 
-def mod_other_op_rm(exe: Exe):
-    return mod_op_rm(exe, inst.OP_OTHER)
+def mod_other_op_rm(cpu: Cpu):
+    return mod_op_rm(cpu, inst.OP_OTHER)
 
 
-def imm8(exe: Exe):
-    byte1 = exe.consume_byte()
+def imm8(cpu: Cpu):
+    byte1 = cpu.consume_byte()
     dst = inst.Reg(byte1 & 0o_7, inst.REG8)
-    data = literal(exe, 1)
+    data = literal(cpu, 1)
     imm = inst.Imm(data, 1)
     return inst.Instr(key=byte1, dst=dst, imm=imm, mnem=mnemonic(byte1))
 
 
-def imm16(exe: Exe):
-    byte1 = exe.consume_byte()
+def imm16(cpu: Cpu):
+    byte1 = cpu.consume_byte()
     dst = inst.Reg(byte1 & 0o_7, inst.REG16)
-    data = literal(exe, 2)
+    data = literal(cpu, 2)
     imm = inst.Imm(data, 2)
     return inst.Instr(key=byte1, dst=dst, imm=imm, mnem=mnemonic(byte1))
 
 
-def imm8a(exe: Exe):
-    byte1 = exe.consume_byte()
+def imm8a(cpu: Cpu):
+    byte1 = cpu.consume_byte()
     dst = inst.Reg(inst.AL, inst.REG8)
-    data = literal(exe, 1)
+    data = literal(cpu, 1)
     imm = inst.Imm(data, 1)
     return inst.Instr(key=byte1, dst=dst, imm=imm, mnem=mnemonic(byte1))
 
 
-def imm16a(exe: Exe):
-    byte1 = exe.consume_byte()
+def imm16a(cpu: Cpu):
+    byte1 = cpu.consume_byte()
     dst = inst.Reg(inst.AX, inst.REG16)
-    data = literal(exe, 2)
+    data = literal(cpu, 2)
     imm = inst.Imm(data, 2)
     return inst.Instr(key=byte1, dst=dst, imm=imm, mnem=mnemonic(byte1))
 
 
-def disp8(exe: Exe):
-    byte1 = exe.consume_byte()
-    disp = literal(exe, 1)
+def disp8(cpu: Cpu):
+    byte1 = cpu.consume_byte()
+    disp = literal(cpu, 1)
     src = inst.EffAddr(disp=disp, size=1)
     return inst.Instr(key=byte1, src=src, mnem=mnemonic(byte1))
 
 
-def to_disp8(exe: Exe):
-    byte1 = exe.consume_byte()
-    dst = inst.Reg(exe.byte & 0o_7, inst.REG8)
-    disp = literal(exe, 1)
+def to_disp8(cpu: Cpu):
+    byte1 = cpu.consume_byte()
+    dst = inst.Reg(cpu.byte & 0o_7, inst.REG8)
+    disp = literal(cpu, 1)
     src = inst.EffAddr(disp=disp, size=1)
     return inst.Instr(key=byte1, src=src, dst=dst, mnem=mnemonic(byte1))
 
 
-def to_disp16(exe: Exe):
-    byte1 = exe.consume_byte()
-    dst = inst.Reg(exe.byte & 0o_7, inst.REG16)
-    disp = literal(exe, 2)
+def to_disp16(cpu: Cpu):
+    byte1 = cpu.consume_byte()
+    dst = inst.Reg(cpu.byte & 0o_7, inst.REG16)
+    disp = literal(cpu, 2)
     src = inst.EffAddr(disp=disp, size=2)
     return inst.Instr(key=byte1, src=src, dst=dst, mnem=mnemonic(byte1))
 
 
-def to_reg(exe: Exe):
-    byte1 = exe.consume_byte()
+def to_reg(cpu: Cpu):
+    byte1 = cpu.consume_byte()
     reg = inst.Reg(byte1 & 0o_3, inst.REG16)
     return inst.Instr(key=byte1, dst=reg, mnem=mnemonic(byte1))
 
 
-def from_reg(exe: Exe):
-    byte1 = exe.consume_byte()
+def from_reg(cpu: Cpu):
+    byte1 = cpu.consume_byte()
     reg = inst.Reg(byte1 & 0o_3, inst.REG16)
     return inst.Instr(key=byte1, src=reg, mnem=mnemonic(byte1))
 
 
-def ip8(exe: Exe):
+def ip8(cpu: Cpu):
     raise NotImplementedError
 
 
-def mod_0sr_rm(exe: Exe):
+def mod_0sr_rm(cpu: Cpu):
     raise NotImplementedError
 
 
-def mod_1xx_rm(exe: Exe):
+def mod_1xx_rm(cpu: Cpu):
     raise NotImplementedError
 
 
-def disp16(exe: Exe):
+def disp16(cpu: Cpu):
     raise NotImplementedError
 
 
-def addracc(exe: Exe):
-    byte1 = exe.consume_byte()
+def addracc(cpu: Cpu):
+    byte1 = cpu.consume_byte()
     fields1 = BitFields.dw_fields(byte1)
 
     if fields1.w == 0:
@@ -250,34 +250,34 @@ def addracc(exe: Exe):
     else:
         reg = inst.Reg(inst.AX, inst.REG16)
 
-    disp = literal(exe, 2)
+    disp = literal(cpu, 2)
     eff_addr = inst.EffAddr(disp=disp, size=2)
 
     src, dst = swap(fields1, eff_addr, reg)
     return inst.Instr(key=byte1, src=src, dst=dst, mnem=mnemonic(byte1))
 
 
-def literal_2nd(exe: Exe):
+def literal_2nd(cpu: Cpu):
     raise NotImplementedError
 
 
-def mod_yyy_rm(exe: Exe):
+def mod_yyy_rm(cpu: Cpu):
     raise NotImplementedError
 
 
-def seg(exe: Exe):
+def seg(cpu: Cpu):
     raise NotImplementedError
 
 
-def seg_prefix(exe: Exe):
+def seg_prefix(cpu: Cpu):
     raise NotImplementedError
 
 
-def decimal_adjust(exe: Exe):
+def decimal_adjust(cpu: Cpu):
     raise NotImplementedError
 
 
-def acsii_adjust(exe: Exe):
+def acsii_adjust(cpu: Cpu):
     raise NotImplementedError
 
 

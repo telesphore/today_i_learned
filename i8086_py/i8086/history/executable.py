@@ -18,3 +18,6 @@ class Exe:
         byte = self.byte
         self.idx += 1
         return byte
+
+    def append(self, instr):
+        self.instr.append(instr)
