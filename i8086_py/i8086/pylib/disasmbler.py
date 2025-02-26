@@ -72,26 +72,26 @@ def literal(cpu: Cpu, size: int) -> int:
 
 
 # ###########################################################################
-RegRm = inst.EffAddr | inst.Reg
+RegRm = inst.Mem | inst.Reg
 
 
-def calc_eff_addr(cpu: Cpu, fields1: BitFields, fields2: BitFields) -> inst.EffAddr:
+def calc_eff_addr(cpu: Cpu, fields1: BitFields, fields2: BitFields) -> inst.Mem:
     match fields2.mod:
         case 0 if fields2.rm == 0b_110:
             size = 1 + fields1.w
             disp = literal(cpu, size)
-            eff_addr = inst.EffAddr(disp=disp, size=size)
+            eff_addr = inst.Mem(disp=disp, size=size)
 
         case 0:
-            eff_addr = inst.EffAddr(ea_reg=fields2.rm, size=0)
+            eff_addr = inst.Mem(ea_reg=fields2.rm, size=0)
 
         case 1:
             disp = literal(cpu, 1)
-            eff_addr = inst.EffAddr(ea_reg=fields2.rm, disp=disp, size=1)
+            eff_addr = inst.Mem(ea_reg=fields2.rm, disp=disp, size=1)
 
         case 2:
             disp = literal(cpu, 2)
-            eff_addr = inst.EffAddr(ea_reg=fields2.rm, disp=disp, size=2)
+            eff_addr = inst.Mem(ea_reg=fields2.rm, disp=disp, size=2)
 
         case 3:
             eff_addr = inst.Reg(fields2.rm, fields1.w)
@@ -197,7 +197,7 @@ def imm16a(cpu: Cpu):
 def disp8(cpu: Cpu):
     byte1 = cpu.consume_byte()
     disp = literal(cpu, 1)
-    src = inst.EffAddr(disp=disp, size=1)
+    src = inst.Mem(disp=disp, size=1)
     return inst.Instr(key=byte1, src=src, mnem=mnemonic(byte1))
 
 
@@ -205,7 +205,7 @@ def to_disp8(cpu: Cpu):
     byte1 = cpu.consume_byte()
     dst = inst.Reg(cpu.byte & 0o_7, inst.REG8)
     disp = literal(cpu, 1)
-    src = inst.EffAddr(disp=disp, size=1)
+    src = inst.Mem(disp=disp, size=1)
     return inst.Instr(key=byte1, src=src, dst=dst, mnem=mnemonic(byte1))
 
 
@@ -213,7 +213,7 @@ def to_disp16(cpu: Cpu):
     byte1 = cpu.consume_byte()
     dst = inst.Reg(cpu.byte & 0o_7, inst.REG16)
     disp = literal(cpu, 2)
-    src = inst.EffAddr(disp=disp, size=2)
+    src = inst.Mem(disp=disp, size=2)
     return inst.Instr(key=byte1, src=src, dst=dst, mnem=mnemonic(byte1))
 
 
@@ -255,7 +255,7 @@ def addracc(cpu: Cpu):
         reg = inst.Reg(inst.AX, inst.REG16)
 
     disp = literal(cpu, 2)
-    eff_addr = inst.EffAddr(disp=disp, size=2)
+    eff_addr = inst.Mem(disp=disp, size=2)
 
     src, dst = swap(fields1, eff_addr, reg)
     return inst.Instr(key=byte1, src=src, dst=dst, mnem=mnemonic(byte1))

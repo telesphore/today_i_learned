@@ -1,5 +1,7 @@
+from dataclasses import dataclass
+
 from i8086.pylib.cpu import Cpu
-from i8086.pylib.instruction import REG16, EffAddr, Instr, Reg
+from i8086.pylib.instruction import AX, REG16, Instr, Mem, Reg
 
 BX = 3
 BP = 5
@@ -12,7 +14,7 @@ def src_val(cpu: Cpu, instr: Instr) -> int:
     if isinstance(instr.src, Reg):
         val = cpu.reg[instr.src.type_][instr.src.reg]
 
-    elif isinstance(instr.src, EffAddr):
+    elif isinstance(instr.src, Mem):
         off = eff_addr(cpu, instr.src)
 
         if instr.src.size == 1:
@@ -28,7 +30,7 @@ def src_val(cpu: Cpu, instr: Instr) -> int:
     return val & 0xFFFF
 
 
-def eff_addr(cpu: Cpu, arg: EffAddr) -> int:
+def eff_addr(cpu: Cpu, arg: Mem) -> int:
     off = 0
 
     if arg.ea_reg is not None:
@@ -58,7 +60,7 @@ def dst_val(cpu: Cpu, instr: Instr) -> int:
     if isinstance(instr.dst, Reg):
         val = cpu.reg[instr.dst.type_][instr.dst.reg]
 
-    elif isinstance(instr.dst, EffAddr):
+    elif isinstance(instr.dst, Mem):
         off = eff_addr(cpu, instr.dst)
         val = cpu.mem[off]
 
@@ -72,7 +74,7 @@ def set_dst(cpu: Cpu, instr: Instr, val: int, *, flags: bool = True):
     if isinstance(instr.dst, Reg):
         cpu.reg[instr.dst.type_][instr.dst.reg] = val & 0xFFFF
 
-    elif isinstance(instr.dst, EffAddr):
+    elif isinstance(instr.dst, Mem):
         off = eff_addr(cpu, instr.dst)
         if instr.dst.size == 1:
             cpu.mem[off] = val
@@ -88,11 +90,78 @@ def set_flags(cpu: Cpu, val: int):
 
 
 # ###########################################################################
+EA_CYCLES = [
+    # [6, 6, 6, 6, 6, 6, 6, 6],  # Displacement only
+    [12, 12, 11, 11, 9, 9, 9, 9],  # Displacement and register
+    [8, 8, 7, 7, 5, 5, 5, 5],  # Register only
+]
+
+
+def eff_addr_cycles(arg: Mem) -> int:
+    tics = 0
+
+    if arg.disp and not arg.ea_reg:
+        tics = 6
+
+    elif arg.disp and arg.ea_reg:
+        tics = EA_CYCLES[0][arg.ea_reg]
+
+    elif not arg.disp and arg.ea_reg:
+        tics = EA_CYCLES[1][arg.ea_reg]
+
+    return tics
+
+
+@dataclass
+class Cycles:
+    reg_reg: int = None
+    reg_mem: int = None
+    mem_reg: int = None
+    reg_imm: int = None
+    mem_imm: int = None
+    acc_imm: int = None
+    acc_mem: int = None
+    mem_acc: int = None
+
+
+def calc_cycles(instr: Instr, cycles: Cycles):
+    tics = 0
+
+    if isinstance(instr.dst, Reg) and instr.dst.reg == AX and instr.imm:
+        tics = cycles.acc_imm
+
+    elif isinstance(instr.dst, Reg) and instr.dst == AX and isinstance(instr.src, Mem):
+        tics = cycles.acc_mem + eff_addr_cycles(instr.src)
+
+    elif isinstance(instr.dst, Mem) and isinstance(instr.src, Reg) and instr.src == AX:
+        tics = cycles.mem_acc + eff_addr_cycles(instr.dst)
+
+    elif isinstance(instr.dst, Reg) and isinstance(instr.src, Reg):
+        tics = cycles.reg_reg
+
+    elif isinstance(instr.dst, Reg) and isinstance(instr.src, Mem):
+        tics = cycles.reg_mem + eff_addr_cycles(instr.src)
+
+    elif isinstance(instr.dst, Mem) and isinstance(instr.src, Reg):
+        tics = cycles.mem_reg + eff_addr_cycles(instr.dst)
+
+    elif isinstance(instr.dst, Reg) and instr.imm:
+        tics = cycles.reg_imm
+
+    elif isinstance(instr.dst, Mem) and instr.imm:
+        tics = cycles.mem_imm + eff_addr_cycles(instr.dst)
+
+    return tics
+
+
+# ###########################################################################
 def add(cpu: Cpu, instr: Instr):
     src = src_val(cpu, instr)
     dst = dst_val(cpu, instr)
     dst += src
     set_dst(cpu, instr, dst)
+    cycles = Cycles(reg_reg=3, reg_mem=9, mem_reg=16, reg_imm=4, mem_imm=17, acc_imm=4)
+    print(f"\tadd cycles = {calc_cycles(instr, cycles)}")
 
 
 def cmp(cpu: Cpu, instr: Instr):
@@ -100,6 +169,8 @@ def cmp(cpu: Cpu, instr: Instr):
     dst = dst_val(cpu, instr)
     dst -= src
     set_flags(cpu, dst)
+    cycles = Cycles(reg_reg=3, reg_mem=9, mem_reg=9, reg_imm=4, mem_imm=10, acc_imm=4)
+    print(f"\t\tcmp cycles = {calc_cycles(instr, cycles)}")
 
 
 def je(cpu: Cpu, instr: Instr):
@@ -125,6 +196,10 @@ def jz(cpu: Cpu, instr: Instr):
 def mov(cpu: Cpu, instr: Instr):
     val = src_val(cpu, instr)
     set_dst(cpu, instr, val, flags=False)
+    cycles = Cycles(
+        mem_acc=10, acc_mem=10, reg_reg=2, reg_mem=8, mem_reg=9, reg_imm=4, mem_imm=10
+    )
+    print(f"\t\tmov cycles = {calc_cycles(instr, cycles)}")
 
 
 def sub(cpu: Cpu, instr: Instr):
@@ -132,6 +207,8 @@ def sub(cpu: Cpu, instr: Instr):
     dst = dst_val(cpu, instr)
     dst -= src
     set_dst(cpu, instr, dst)
+    cycles = Cycles(reg_reg=3, reg_mem=9, mem_reg=16, reg_imm=4, mem_imm=17, acc_imm=4)
+    print(f"\t\tsub cycles = {calc_cycles(instr, cycles)}")
 
 
 # ###########################################################################

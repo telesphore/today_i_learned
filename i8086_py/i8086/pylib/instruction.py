@@ -48,7 +48,7 @@ class Reg:
 
 
 @dataclass
-class EffAddr:
+class Mem:
     ea_reg: int = None
     disp: int = None
     size: int = None
@@ -74,8 +74,8 @@ class Imm:
         return str(self.data)
 
 
-Dst = Reg | EffAddr
-Src = Reg | EffAddr
+Dst = Reg | Mem
+Src = Reg | Mem
 
 
 @dataclass
@@ -90,7 +90,7 @@ class Instr:
         print(hex(self.key), self)
 
     def format(self):
-        self.debug()
+        # self.debug()
         out = ""
 
         if self.dst:
@@ -102,7 +102,7 @@ class Instr:
 
         if self.imm:
             out += ", " if out else ""
-            if isinstance(self.dst, EffAddr):
+            if isinstance(self.dst, Mem):
                 out += "byte " if self.imm.size == 1 else "word "
             out += self.imm.format()
 
