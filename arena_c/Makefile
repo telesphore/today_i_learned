@@ -3,7 +3,7 @@ CFLAGS = -Wall -Wextra -std=c2x -pedantic
 OPTFLAGS = -O3 -march=native
 LIBFLAGS =
 SRC = src/main.c src/arena.c
-TARGET = c-out/arena
+TARGET = bin/arena
 
 game_of_life: $(SRC)
 	$(CC) src/main.c -o $(TARGET) $(CFLAGS) $(OPTFLAGS) $(LIBFLAGS)

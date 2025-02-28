@@ -7,7 +7,7 @@
 #include <assert.h>
 /*#include <string.h>*/
 
-#include "arena.c"
+#include "bump.c"
 #include "unit_test.h"
 
 int tests_run = 0;
@@ -15,9 +15,9 @@ int tests_run = 0;
 static char* test1() {
     const size_t size = 1024;
     unsigned char buff[size];
-    Arena arena = {0};
-    arena_init(&arena, buff, size);
-    ASSERT("Arena length", arena.end == size);
+    Bump bump = {0};
+    bump_init(&bump, buff, size);
+    ASSERT("Bump length", bump.end == size);
     return 0;
 }
 
