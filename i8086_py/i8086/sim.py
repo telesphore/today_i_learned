@@ -24,7 +24,7 @@ def main(args):
 
     if not args.quiet:
         print()
-        cpu.display(1000)
+        cpu.display(start=1000)
 
     if args.dump:
         cpu.dump(args.dump)
