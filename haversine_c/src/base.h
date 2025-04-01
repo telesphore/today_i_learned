@@ -1,5 +1,5 @@
-#ifndef ABBREV_H
-#define ABBREV_H
+#ifndef BASE_H
+#define BASE_H
 
 #include <stdint.h>
 #include <sys/types.h>

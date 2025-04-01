@@ -1,16 +1,24 @@
 #include <ctype.h>
 #include <getopt.h>
+#include <setjmp.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "abbrev.h"
+#include "base.h"
 #include "haversine.c"
+#include "profiler.c"
 
 typedef struct Args {
     char *json_file;
 } Args;
+
+typedef struct Json {
+    char *buff;
+    char *name;
+    i64 len;
+} Json;
 
 const char *HELP =
     "Given a set of pairs of latitude and longitude, calculate their haversine distances."
@@ -42,7 +50,19 @@ Args parse_args(int argc, char **argv) {
     return args;
 }
 
-char *read_json(char *file_name) {
+void read_file(FILE *file, Json *json) {
+    block_bandwidth("fread json", json->len);
+    i64 read = fread(json->buff, 1, json->len, file);
+    if (read != json->len) {
+        fprintf(stderr, "Could not read %s\n", json->name);
+        exit(EXIT_FAILURE);
+    }
+    block_end();
+}
+
+Json read_json(char *file_name) {
+    Json json = {.name = file_name};
+
     FILE *file = fopen(file_name, "r");
     if (file == NULL) {
         fprintf(stderr, "Failed to open JSON file %s\n", file_name);
@@ -54,9 +74,9 @@ char *read_json(char *file_name) {
         exit(EXIT_FAILURE);
     }
 
-    i32 len = ftell(file);
-    if (len == -1) {
-        fprintf(stderr, "Could not tell %s\n", file_name);
+    json.len = ftell(file);
+    if (json.len == -1) {
+        fprintf(stderr, "Could not tell %s\n", json.name);
         exit(EXIT_FAILURE);
     }
 
@@ -65,25 +85,24 @@ char *read_json(char *file_name) {
         exit(EXIT_FAILURE);
     }
 
-    char *json = malloc(len + 1);
-    if (json == NULL) {
+    block_start("alloc json");
+    json.buff = malloc(json.len + 1);
+    if (json.buff == NULL) {
         fprintf(stderr, "Could not allocate a buffer for the JSON data\n");
         exit(EXIT_FAILURE);
     }
+    block_end();
 
-    i64 read = fread(json, 1, len, file);
-    if (read != len) {
-        fprintf(stderr, "Could not read %s\n", file_name);
-        exit(EXIT_FAILURE);
-    }
+    read_file(file, &json);
 
     fclose(file);
 
-    json[len] = 0;
+    json.buff[json.len] = 0; // Null terminate string
+
     return json;
 }
 
-char *skip_ws(char *json) {
+inline char *skip_ws(char *json) {
     while (json[0] && isspace(json[0])) {
         ++json;
     }
@@ -103,6 +122,14 @@ i32 get_count(char *json) {
     json = skip_ws(json) + 1;             // Skip colon :
     json = skip_ws(json);
     return strtol(json, &end, 10);
+}
+
+f64 get_sum(char *json) {
+    char *end;
+    json = strstr(json, "\"sum\"") + 5; // Skip label "count"
+    json = skip_ws(json) + 1;           // Skip colon :
+    json = skip_ws(json);
+    return strtof(json, &end);
 }
 
 void parse_json_pairs(char *json, Pair *pairs, i32 count) {
@@ -149,22 +176,50 @@ void parse_json_pairs(char *json, Pair *pairs, i32 count) {
 }
 
 int main(int argc, char **argv) {
+    start_profiler();
+
+    block_start("parse args");
     Args args = parse_args(argc, argv);
+    block_end();
 
-    char *json = read_json(args.json_file);
-    printf("%s\n", json);
+    block_start("read json");
+    Json json = read_json(args.json_file);
+    block_end();
 
-    i32 count = get_count(json);
+    block_start("get count");
+    i32 count = get_count(json.buff);
+    block_end();
 
+    block_start("get sum");
+    f64 ori_sum = get_sum(json.buff);
+    block_end();
+
+    block_bandwidth("alloc pairs", json.len);
     Pair *pairs = alloc_pairs(count);
+    block_end();
 
-    parse_json_pairs(json, pairs, count);
+    block_bandwidth("parse pairs", json.len);
+    parse_json_pairs(json.buff, pairs, count);
+    block_end();
 
+    block_bandwidth("calc", count * sizeof(Pair));
+    f64 sum = 0.0;
     for (i32 i = 0; i < count; ++i) {
+        block_bandwidth("calc one", sizeof(Pair));
         Pair p = pairs[i];
-        printf("{ x0 = %21.16f, y0 = %21.16f, x1 = %21.16f, y1 = %21.16f }\n", p.x0, p.y0, p.x1, p.y1);
+        sum += haversine_pair_0(p);
+        block_end();
     }
+    sum /= (f64)count;
+    block_end();
 
-    free(json);
+    printf("\noriginal %8.4f - %8.4f = %8.4f\n\n", ori_sum, sum, ori_sum - sum);
+
+    block_start("free");
+    free(json.buff);
+    block_end();
+
+    end_profiler();
+
     return 0;
 }

@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "abbrev.h"
+#include "base.h"
 
 const f64 earth_radius = 6372.8;
 
